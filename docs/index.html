@@ -384,34 +384,43 @@ function run(play){
   }
 }
 
-// RX — dedicated ggwave instance + AudioContext, uses actual mic sample rate
-var rR=null,rM=null,rCtx=null,rxInst=null,rxGG=null,rxStream=null;
+// RX — runs BOTH modules in parallel (original uses 16 marker frames,
+// optimized uses 4, so we need both to decode all transmissions)
+var rR=null,rM=null,rCtx=null,rxStream=null;
+var rxInstO=null,rxInstN=null; // one instance per module
+var rxDecodeCount=0;
+
 function rxGo(){
-  rxGG=ggN||ggO;
-  if(!rxGG){document.getElementById('rx-out').textContent='No ggwave module loaded';return;}
+  if(!ggO&&!ggN){document.getElementById('rx-out').textContent='No ggwave module loaded';return;}
 
   document.getElementById('rx-go').style.display='none';
   document.getElementById('rx-stop').style.display='';
   document.getElementById('rx-out').textContent='Requesting mic...';
   document.getElementById('rx-out').className='rx-out';
   document.getElementById('rx-level-wrap').style.display='block';
+  rxDecodeCount=0;
 
   navigator.mediaDevices.getUserMedia({
     audio:{echoCancellation:false,autoGainControl:false,noiseSuppression:false}
   }).then(function(stream){
     rxStream=stream;
-    // Create AudioContext — use browser's preferred rate
     rCtx=new(window.AudioContext||window.webkitAudioContext)();
     rCtx.resume();
-    var actualRate=rCtx.sampleRate;
-    document.getElementById('rx-rate').textContent=actualRate+'Hz';
+    var rate=rCtx.sampleRate;
+    document.getElementById('rx-rate').textContent=rate+'Hz';
 
-    // Create ggwave RX instance matching the actual mic sample rate
-    var p=rxGG.getDefaultParameters();
-    p.sampleRateInp=actualRate;
-    p.sampleRateOut=actualRate;
-    p.operatingMode=rxGG.GGWAVE_OPERATING_MODE_RX;
-    rxInst=rxGG.init(p);
+    // Create RX instance for ORIGINAL module (16 marker frames)
+    if(ggO){
+      var pO=ggO.getDefaultParameters();
+      pO.sampleRateInp=rate; pO.sampleRateOut=rate;
+      rxInstO=ggO.init(pO);
+    }
+    // Create RX instance for OPTIMIZED module (4 marker frames)
+    if(ggN){
+      var pN=ggN.getDefaultParameters();
+      pN.sampleRateInp=rate; pN.sampleRateOut=rate;
+      rxInstN=ggN.init(pN);
+    }
 
     rM=rCtx.createMediaStreamSource(stream);
     rR=rCtx.createScriptProcessor(1024,1,1);
@@ -424,21 +433,34 @@ function rxGo(){
       for(var i=0;i<chan.length;i++){var a=Math.abs(chan[i]);if(a>peak)peak=a;}
       document.getElementById('rx-level').style.width=Math.min(100,peak*300).toFixed(0)+'%';
 
-      // Copy Float32 data into a fresh buffer (browser may reuse the internal one)
+      // Copy audio data (browser reuses internal buffers)
       var copy=new Float32Array(chan.length);
       copy.set(chan);
-      // Reinterpret as raw bytes for ggwave decode (sampleFormatInp=F32)
       var bytes=new Int8Array(copy.buffer);
-      var r=rxGG.decode(rxInst,bytes);
-      if(r&&r.length>0){
-        document.getElementById('rx-out').textContent=new TextDecoder('utf-8').decode(r);
+
+      // Feed to BOTH decoders — whichever matches will decode
+      var decoded=null, source='';
+      if(ggO&&rxInstO){
+        var copy2=new Int8Array(bytes.length);
+        copy2.set(bytes);
+        var r=ggO.decode(rxInstO,copy2);
+        if(r&&r.length>0){decoded=r;source='original';}
+      }
+      if(ggN&&rxInstN){
+        var r=ggN.decode(rxInstN,bytes);
+        if(r&&r.length>0){decoded=r;source='optimized';}
+      }
+      if(decoded){
+        rxDecodeCount++;
+        var text=new TextDecoder('utf-8').decode(decoded);
+        document.getElementById('rx-out').textContent='['+source+' #'+rxDecodeCount+'] '+text;
         document.getElementById('rx-out').className='rx-out got';
       }
     };
 
     rM.connect(rR);
     rR.connect(rCtx.destination);
-    document.getElementById('rx-out').textContent='Listening... ('+actualRate+'Hz)';
+    document.getElementById('rx-out').textContent='Listening on both modules... ('+rate+'Hz)';
   }).catch(function(err){
     document.getElementById('rx-out').textContent='Mic error: '+err.message;
     document.getElementById('rx-go').style.display='';
@@ -449,7 +471,8 @@ function rxGo(){
 function rxStop(){
   if(rR){rR.disconnect();if(rM)rM.disconnect(rR);rR=null;rM=null;}
   if(rxStream){rxStream.getTracks().forEach(function(t){t.stop();});rxStream=null;}
-  if(rxInst!==null&&rxGG){rxGG.free(rxInst);rxInst=null;}
+  if(rxInstO!==null&&ggO){ggO.free(rxInstO);rxInstO=null;}
+  if(rxInstN!==null&&ggN){ggN.free(rxInstN);rxInstN=null;}
   if(rCtx){rCtx.close();rCtx=null;}
   document.getElementById('rx-go').style.display='';
   document.getElementById('rx-stop').style.display='none';
