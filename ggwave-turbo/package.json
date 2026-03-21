@@ -1,0 +1,50 @@
+{
+  "name": "ggwave-turbo",
+  "version": "1.0.0",
+  "description": "High-speed data-over-sound library. Optimized fork of ggwave with turbo/ultra protocols, SIMD acceleration, and up to 15x faster throughput.",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./wasm": "./dist/ggwave.js"
+  },
+  "files": [
+    "dist/",
+    "src/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build:wasm": "bash scripts/build-wasm.sh",
+    "build:js": "tsc && tsc -p tsconfig.esm.json",
+    "build": "npm run build:wasm && npm run build:js",
+    "prepublishOnly": "npm run build",
+    "test": "node dist/test.js"
+  },
+  "keywords": [
+    "data-over-sound",
+    "audio",
+    "fsk",
+    "ultrasound",
+    "ggwave",
+    "wasm",
+    "webaudio",
+    "modem",
+    "acoustic",
+    "turbo"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/user/ggwave-turbo.git"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
