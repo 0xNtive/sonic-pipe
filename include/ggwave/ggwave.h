@@ -443,7 +443,7 @@ public:
     static constexpr auto kDefaultSamplesPerFrame      = 1024;
     static constexpr auto kDefaultVolume               = 10;
     static constexpr auto kDefaultSoundMarkerThreshold = 3.0f;
-    static constexpr auto kDefaultMarkerFrames         = 4;
+    static constexpr auto kDefaultMarkerFrames         = 8;
     static constexpr auto kDefaultEncodedDataOffset    = 3;
     static constexpr auto kMaxSamplesPerFrame          = 1024;
     static constexpr auto kMaxDataSize                 = 256;
