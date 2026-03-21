@@ -229,21 +229,11 @@ canvas { width:100%; height:50px; border-radius:4px; background:var(--bg-input);
 <script>
 var SR=48000, ggO=null, ggN=null, iO=null, iN=null, actx=null;
 var P=[
-  {k:'GGWAVE_PROTOCOL_AUDIBLE_NORMAL',     l:'Audible Normal',      ear:1, t:0},
-  {k:'GGWAVE_PROTOCOL_AUDIBLE_FAST',       l:'Audible Fast',        ear:1, t:0},
-  {k:'GGWAVE_PROTOCOL_AUDIBLE_FASTEST',    l:'Audible Fastest',     ear:1, t:0},
-  {k:'GGWAVE_PROTOCOL_AUDIBLE_TURBO',      l:'Audible Turbo',       ear:1, t:1},
-  {k:'GGWAVE_PROTOCOL_AUDIBLE_TURBO_WIDE', l:'Audible Turbo Wide',  ear:1, t:1},
-  {k:'GGWAVE_PROTOCOL_AUDIBLE_ULTRA',      l:'Audible Ultra',       ear:1, t:1},
-  {k:'GGWAVE_PROTOCOL_AUDIBLE_ULTRA_WIDE', l:'Audible Ultra Wide',  ear:1, t:1},
-  {k:'GGWAVE_PROTOCOL_ULTRASOUND_NORMAL',  l:'Ultrasound Normal',   ear:0, t:0},
-  {k:'GGWAVE_PROTOCOL_ULTRASOUND_FAST',    l:'Ultrasound Fast',     ear:0, t:0},
-  {k:'GGWAVE_PROTOCOL_ULTRASOUND_FASTEST', l:'Ultrasound Fastest',  ear:0, t:0},
-  {k:'GGWAVE_PROTOCOL_ULTRASOUND_TURBO',   l:'Ultrasound Turbo',    ear:0, t:1},
-  {k:'GGWAVE_PROTOCOL_ULTRASOUND_ULTRA',   l:'Ultrasound Ultra',    ear:0, t:1},
-  {k:'GGWAVE_PROTOCOL_DT_NORMAL',          l:'DT Normal',           ear:1, t:0},
-  {k:'GGWAVE_PROTOCOL_DT_FAST',            l:'DT Fast',             ear:1, t:0},
-  {k:'GGWAVE_PROTOCOL_DT_FASTEST',         l:'DT Fastest',          ear:1, t:0},
+  {k:'GGWAVE_PROTOCOL_AUDIBLE_NORMAL',     l:'Normal',       t:0},
+  {k:'GGWAVE_PROTOCOL_AUDIBLE_FAST',       l:'Fast',         t:0},
+  {k:'GGWAVE_PROTOCOL_AUDIBLE_FASTEST',    l:'Fastest',      t:0},
+  {k:'GGWAVE_PROTOCOL_AUDIBLE_TURBO',      l:'Turbo',        t:1},
+  {k:'GGWAVE_PROTOCOL_AUDIBLE_TURBO_WIDE', l:'Turbo Wide',   t:1},
 ];
 function cv(s,T){var b=new ArrayBuffer(s.byteLength);new s.constructor(b).set(s);return new T(b);}
 function gp(g,k){try{return g.ProtocolId[k]}catch(e){return null}}
@@ -251,17 +241,13 @@ function mkI(g){var p=g.getDefaultParameters();p.sampleRateInp=SR;p.sampleRateOu
 function ctx(){if(!actx)actx=new(window.AudioContext||window.webkitAudioContext)({sampleRate:SR});return actx;}
 
 function fillSel(sel,gg,side){
-  sel.innerHTML='';var le=null;
+  sel.innerHTML='';
   P.forEach(function(p){
-    if(le!==null&&p.ear!==le){var s=document.createElement('option');s.disabled=true;s.textContent='\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500';sel.appendChild(s);}
-    le=p.ear;
     var o=document.createElement('option');
-    var ic=p.ear?'\uD83D\uDD0A ':'\uD83D\uDD07 ';
-    var lb=ic+p.l;
+    var lb=p.l;
     var av=gg&&gp(gg,p.k)!==null&&gp(gg,p.k)!==undefined;
     if(p.t&&side==='o'){lb+='  [N/A]';o.disabled=true;}
-    else if(p.t){lb+='  \u2605';}
-    if(!p.ear)lb+='  (inaudible)';
+    else if(p.t){lb+='  \u2605 new';}
     if(!av&&!p.t)o.disabled=true;
     o.value=p.k;o.textContent=lb;sel.appendChild(o);
   });
@@ -284,7 +270,7 @@ function loadN(){return new Promise(function(ok){
 loadO().then(function(){return loadN()}).then(function(){
   if(ggO||ggN){document.getElementById('btn-go').disabled=false;document.getElementById('btn-enc').disabled=false;document.getElementById('rx-go').disabled=false;}
   var s=document.getElementById('proto-opt');
-  for(var i=0;i<s.options.length;i++){if(s.options[i].value==='GGWAVE_PROTOCOL_AUDIBLE_ULTRA_WIDE'){s.selectedIndex=i;break;}}
+  for(var i=0;i<s.options.length;i++){if(s.options[i].value==='GGWAVE_PROTOCOL_AUDIBLE_TURBO_WIDE'){s.selectedIndex=i;break;}}
 });
 
 function drawW(cid,wf){
