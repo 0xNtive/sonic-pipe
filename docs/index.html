@@ -209,6 +209,15 @@ canvas { width:100%; height:50px; border-radius:4px; background:var(--bg-input);
         <button class="btn" id="rx-stop" style="display:none;border-color:var(--warn);color:var(--warn)">Stop</button>
         <div class="rx-out" id="rx-out">Idle</div>
       </div>
+      <div id="rx-level-wrap" style="display:none;margin-top:0.6rem">
+        <div style="display:flex;align-items:center;gap:0.5rem">
+          <span style="font-family:var(--mono);font-size:0.6rem;color:var(--text-dim);text-transform:uppercase">Mic level</span>
+          <div style="flex:1;height:6px;background:var(--bg-input);border-radius:3px;overflow:hidden">
+            <div id="rx-level" style="height:100%;width:0%;background:var(--accent);border-radius:3px;transition:width 0.05s"></div>
+          </div>
+          <span id="rx-rate" style="font-family:var(--mono);font-size:0.6rem;color:var(--text-dim)"></span>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -375,44 +384,79 @@ function run(play){
   }
 }
 
-// RX — uses a dedicated ggwave instance to avoid state conflicts with TX
-var rR=null,rM=null,rCtx=null,rxInst=null,rxGG=null;
+// RX — dedicated ggwave instance + AudioContext, uses actual mic sample rate
+var rR=null,rM=null,rCtx=null,rxInst=null,rxGG=null,rxStream=null;
 function rxGo(){
   rxGG=ggN||ggO;
-  if(!rxGG) return;
-  // Create a dedicated RX instance
-  rxInst=mkI(rxGG);
-  rCtx=new(window.AudioContext||window.webkitAudioContext)({sampleRate:SR});
-  rCtx.resume();
+  if(!rxGG){document.getElementById('rx-out').textContent='No ggwave module loaded';return;}
+
   document.getElementById('rx-go').style.display='none';
   document.getElementById('rx-stop').style.display='';
-  document.getElementById('rx-out').textContent='Listening...';
+  document.getElementById('rx-out').textContent='Requesting mic...';
   document.getElementById('rx-out').className='rx-out';
-  navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,autoGainControl:false,noiseSuppression:false}}).then(function(stream){
+  document.getElementById('rx-level-wrap').style.display='block';
+
+  navigator.mediaDevices.getUserMedia({
+    audio:{echoCancellation:false,autoGainControl:false,noiseSuppression:false}
+  }).then(function(stream){
+    rxStream=stream;
+    // Create AudioContext — use browser's preferred rate
+    rCtx=new(window.AudioContext||window.webkitAudioContext)();
+    rCtx.resume();
+    var actualRate=rCtx.sampleRate;
+    document.getElementById('rx-rate').textContent=actualRate+'Hz';
+
+    // Create ggwave RX instance matching the actual mic sample rate
+    var p=rxGG.getDefaultParameters();
+    p.sampleRateInp=actualRate;
+    p.sampleRateOut=actualRate;
+    p.operatingMode=rxGG.GGWAVE_OPERATING_MODE_RX;
+    rxInst=rxGG.init(p);
+
     rM=rCtx.createMediaStreamSource(stream);
     rR=rCtx.createScriptProcessor(1024,1,1);
+
     rR.onaudioprocess=function(e){
-      var samples=e.inputBuffer.getChannelData(0);
-      // Pass raw Float32 bytes to ggwave decode (it expects sampleFormatInp bytes)
-      var rawBytes=new Int8Array(samples.buffer, samples.byteOffset, samples.byteLength);
-      var r=rxGG.decode(rxInst, rawBytes);
+      var chan=e.inputBuffer.getChannelData(0);
+
+      // Level meter
+      var peak=0;
+      for(var i=0;i<chan.length;i++){var a=Math.abs(chan[i]);if(a>peak)peak=a;}
+      document.getElementById('rx-level').style.width=Math.min(100,peak*300).toFixed(0)+'%';
+
+      // Copy Float32 data into a fresh buffer (browser may reuse the internal one)
+      var copy=new Float32Array(chan.length);
+      copy.set(chan);
+      // Reinterpret as raw bytes for ggwave decode (sampleFormatInp=F32)
+      var bytes=new Int8Array(copy.buffer);
+      var r=rxGG.decode(rxInst,bytes);
       if(r&&r.length>0){
         document.getElementById('rx-out').textContent=new TextDecoder('utf-8').decode(r);
         document.getElementById('rx-out').className='rx-out got';
       }
     };
+
     rM.connect(rR);
     rR.connect(rCtx.destination);
+    document.getElementById('rx-out').textContent='Listening... ('+actualRate+'Hz)';
   }).catch(function(err){
     document.getElementById('rx-out').textContent='Mic error: '+err.message;
+    document.getElementById('rx-go').style.display='';
+    document.getElementById('rx-stop').style.display='none';
+    document.getElementById('rx-level-wrap').style.display='none';
   });
 }
 function rxStop(){
   if(rR){rR.disconnect();if(rM)rM.disconnect(rR);rR=null;rM=null;}
+  if(rxStream){rxStream.getTracks().forEach(function(t){t.stop();});rxStream=null;}
   if(rxInst!==null&&rxGG){rxGG.free(rxInst);rxInst=null;}
   if(rCtx){rCtx.close();rCtx=null;}
-  document.getElementById('rx-go').style.display='';document.getElementById('rx-stop').style.display='none';
-  document.getElementById('rx-out').textContent='Idle';document.getElementById('rx-out').className='rx-out';
+  document.getElementById('rx-go').style.display='';
+  document.getElementById('rx-stop').style.display='none';
+  document.getElementById('rx-out').textContent='Idle';
+  document.getElementById('rx-out').className='rx-out';
+  document.getElementById('rx-level-wrap').style.display='none';
+  document.getElementById('rx-level').style.width='0%';
 }
 
 document.getElementById('btn-go').addEventListener('click',function(){run(true);});
