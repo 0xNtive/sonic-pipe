@@ -375,22 +375,42 @@ function run(play){
   }
 }
 
-// RX
-var rR=null,rM=null;
+// RX — uses a dedicated ggwave instance to avoid state conflicts with TX
+var rR=null,rM=null,rCtx=null,rxInst=null,rxGG=null;
 function rxGo(){
-  var gg=ggN||ggO,inst=ggN?iN:iO,c=ctx();c.resume();
+  rxGG=ggN||ggO;
+  if(!rxGG) return;
+  // Create a dedicated RX instance
+  rxInst=mkI(rxGG);
+  rCtx=new(window.AudioContext||window.webkitAudioContext)({sampleRate:SR});
+  rCtx.resume();
   document.getElementById('rx-go').style.display='none';
   document.getElementById('rx-stop').style.display='';
   document.getElementById('rx-out').textContent='Listening...';
   document.getElementById('rx-out').className='rx-out';
-  navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,autoGainControl:false,noiseSuppression:false}}).then(function(s){
-    rM=c.createMediaStreamSource(s);rR=c.createScriptProcessor(1024,1,1);
-    rR.onaudioprocess=function(e){var i=new Float32Array(e.inputBuffer.getChannelData(0));var r=gg.decode(inst,cv(i,Int8Array));if(r&&r.length>0){document.getElementById('rx-out').textContent=new TextDecoder('utf-8').decode(r);document.getElementById('rx-out').className='rx-out got';}};
-    rM.connect(rR);rR.connect(c.destination);
+  navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,autoGainControl:false,noiseSuppression:false}}).then(function(stream){
+    rM=rCtx.createMediaStreamSource(stream);
+    rR=rCtx.createScriptProcessor(1024,1,1);
+    rR.onaudioprocess=function(e){
+      var samples=e.inputBuffer.getChannelData(0);
+      // Pass raw Float32 bytes to ggwave decode (it expects sampleFormatInp bytes)
+      var rawBytes=new Int8Array(samples.buffer, samples.byteOffset, samples.byteLength);
+      var r=rxGG.decode(rxInst, rawBytes);
+      if(r&&r.length>0){
+        document.getElementById('rx-out').textContent=new TextDecoder('utf-8').decode(r);
+        document.getElementById('rx-out').className='rx-out got';
+      }
+    };
+    rM.connect(rR);
+    rR.connect(rCtx.destination);
+  }).catch(function(err){
+    document.getElementById('rx-out').textContent='Mic error: '+err.message;
   });
 }
 function rxStop(){
   if(rR){rR.disconnect();if(rM)rM.disconnect(rR);rR=null;rM=null;}
+  if(rxInst!==null&&rxGG){rxGG.free(rxInst);rxInst=null;}
+  if(rCtx){rCtx.close();rCtx=null;}
   document.getElementById('rx-go').style.display='';document.getElementById('rx-stop').style.display='none';
   document.getElementById('rx-out').textContent='Idle';document.getElementById('rx-out').className='rx-out';
 }
