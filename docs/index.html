@@ -3,1110 +3,403 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ggwave // Performance Bench</title>
+<title>sonic-pipe // data over sound</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700;800&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root {
-  --bg: #0a0c10;
-  --bg-panel: #0f1117;
-  --bg-input: #161a24;
-  --border: #1e2330;
-  --border-active: #2a3040;
-  --text: #c8cdd8;
-  --text-dim: #5a6270;
-  --text-bright: #e8ecf4;
+  --bg: #07090d;
+  --bg-card: #0c0f16;
+  --bg-input: #121620;
+  --border: #1a1f2e;
+  --text: #b8bfcc;
+  --text-dim: #4e5666;
+  --text-bright: #e4e8f0;
   --accent: #00d4aa;
-  --accent-dim: #00d4aa30;
-  --accent-glow: #00d4aa18;
+  --accent-dim: rgba(0,212,170,0.12);
+  --accent-glow: rgba(0,212,170,0.06);
+  --orig: #4a9eff;
+  --orig-dim: rgba(74,158,255,0.15);
+  --opt: #00d4aa;
+  --opt-dim: rgba(0,212,170,0.15);
   --warn: #ff6b4a;
-  --warn-dim: #ff6b4a30;
-  --blue: #4a9eff;
-  --blue-dim: #4a9eff30;
-  --yellow: #ffc64a;
-  --mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
-  --sans: 'IBM Plex Sans', -apple-system, sans-serif;
-  --radius: 6px;
-  --grid-line: #1a1e28;
+  --gold: #ffc94a;
+  --mono: 'JetBrains Mono', monospace;
+  --sans: 'IBM Plex Sans', sans-serif;
 }
 html { font-size: 14px; }
-body {
-  font-family: var(--sans);
-  background: var(--bg);
-  color: var(--text);
-  min-height: 100vh;
-  overflow-x: hidden;
-  background-image:
-    linear-gradient(var(--grid-line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
-  background-size: 40px 40px;
-  background-position: -1px -1px;
-}
+body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; }
 
-/* ── Header ── */
-.header {
-  padding: 2.5rem 2rem 2rem;
-  border-bottom: 1px solid var(--border);
-  background: linear-gradient(180deg, #0d0f15 0%, transparent 100%);
-  position: relative;
-}
-.header::after {
-  content: '';
-  position: absolute;
-  bottom: -1px;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--accent-dim), transparent);
-}
-.header h1 {
-  font-family: var(--mono);
-  font-weight: 700;
-  font-size: 1.5rem;
-  color: var(--text-bright);
-  letter-spacing: -0.02em;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-.header h1 .slash {
-  color: var(--accent);
-  font-weight: 300;
-  opacity: 0.6;
-}
-.header p {
-  margin-top: 0.5rem;
-  color: var(--text-dim);
-  font-size: 0.85rem;
-  max-width: 680px;
-  line-height: 1.5;
-}
-.status-bar {
-  display: flex;
-  gap: 1.5rem;
-  margin-top: 1rem;
-  font-family: var(--mono);
-  font-size: 0.75rem;
-}
-.status-item {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-.status-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--text-dim);
-  flex-shrink: 0;
-}
-.status-dot.ready { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
-.status-dot.error { background: var(--warn); box-shadow: 0 0 6px var(--warn); }
-.status-dot.loading { background: var(--yellow); animation: pulse 1.2s infinite; }
-@keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.3} }
+.hero { text-align: center; padding: 3rem 2rem 2rem; position: relative; overflow: hidden; }
+.hero::before { content:''; position:absolute; top:0; left:50%; transform:translateX(-50%); width:600px; height:300px; background:radial-gradient(ellipse,rgba(0,212,170,0.08) 0%,transparent 70%); pointer-events:none; }
+.hero h1 { font-family:var(--mono); font-weight:800; font-size:2.2rem; color:var(--text-bright); letter-spacing:-0.03em; position:relative; }
+.hero h1 span { color: var(--accent); }
+.hero p { color:var(--text-dim); font-size:0.95rem; margin-top:0.5rem; max-width:520px; margin-left:auto; margin-right:auto; line-height:1.6; }
+.status-row { display:flex; justify-content:center; gap:2rem; margin-top:1.25rem; font-family:var(--mono); font-size:0.72rem; }
+.status-item { display:flex; align-items:center; gap:0.4rem; }
+.dot { width:7px; height:7px; border-radius:50%; }
+.dot.ok { background:var(--accent); box-shadow:0 0 8px var(--accent); }
+.dot.err { background:var(--warn); }
+.dot.wait { background:var(--gold); animation:pulse 1s infinite; }
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 
-/* ── Layout ── */
-.columns {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1px;
-  background: var(--border);
-  margin: 0;
-}
-.column {
-  background: var(--bg);
-  padding: 1.5rem 2rem 2rem;
-}
-.column-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 1.25rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid var(--border);
-}
-.column-title {
-  font-family: var(--mono);
-  font-weight: 600;
-  font-size: 0.9rem;
-  color: var(--text-bright);
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-.tag {
-  font-family: var(--mono);
-  font-size: 0.6rem;
-  font-weight: 500;
-  padding: 2px 6px;
-  border-radius: 3px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-.tag-cdn { background: var(--blue-dim); color: var(--blue); }
-.tag-local { background: var(--accent-dim); color: var(--accent); }
-.tag-na { background: var(--warn-dim); color: var(--warn); font-size: 0.55rem; }
-.tag-new { background: var(--accent-dim); color: var(--accent); font-size: 0.55rem; }
+.wrap { max-width:700px; margin:0 auto; padding:0 2rem; }
+.card { background:var(--bg-card); border:1px solid var(--border); border-radius:8px; margin-bottom:1.5rem; overflow:hidden; }
+.card-body { padding: 1.5rem; }
+.lbl { font-family:var(--mono); font-size:0.65rem; font-weight:600; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:0.4rem; }
+.msg-input { width:100%; padding:0.65rem 0.85rem; background:var(--bg-input); border:1px solid var(--border); border-radius:6px; color:var(--text-bright); font-family:var(--mono); font-size:0.9rem; outline:none; }
+.msg-input:focus { border-color:var(--accent); }
+.proto-row { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-top:1rem; }
+.proto-lbl { font-family:var(--mono); font-size:0.6rem; font-weight:600; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:0.3rem; }
+.proto-lbl.o { color:var(--orig); }
+.proto-lbl.n { color:var(--opt); }
+select { width:100%; padding:0.5rem 2rem 0.5rem 0.65rem; background:var(--bg-input); border:1px solid var(--border); border-radius:6px; color:var(--text-bright); font-family:var(--mono); font-size:0.78rem; outline:none; appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%234e5666'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 0.6rem center; cursor:pointer; }
+select:focus { border-color:var(--accent); }
+.action-row { display:flex; gap:0.75rem; margin-top:1.25rem; align-items:center; flex-wrap:wrap; }
+.btn { font-family:var(--mono); font-size:0.78rem; font-weight:600; padding:0.55rem 1.2rem; border:1px solid var(--border); border-radius:6px; background:var(--bg-input); color:var(--text); cursor:pointer; transition:all 0.12s; }
+.btn:hover { border-color:var(--accent); color:var(--text-bright); }
+.btn:active { transform:scale(0.97); }
+.btn:disabled { opacity:0.3; cursor:not-allowed; }
+.btn-go { background:var(--accent); color:var(--bg); border-color:var(--accent); }
+.btn-go:hover { background:#00e8bb; border-color:#00e8bb; color:var(--bg); }
+.btn-go:disabled { background:var(--accent); }
+.vol-g { display:flex; align-items:center; gap:0.5rem; margin-left:auto; font-family:var(--mono); font-size:0.7rem; color:var(--text-dim); }
+input[type="range"] { width:80px; height:4px; -webkit-appearance:none; background:var(--border); border-radius:2px; outline:none; }
+input[type="range"]::-webkit-slider-thumb { -webkit-appearance:none; width:12px; height:12px; border-radius:50%; background:var(--accent); cursor:pointer; border:2px solid var(--bg); }
 
-/* ── Controls ── */
-.control-group {
-  margin-bottom: 1rem;
-}
-.control-label {
-  font-family: var(--mono);
-  font-size: 0.7rem;
-  font-weight: 500;
-  color: var(--text-dim);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  margin-bottom: 0.35rem;
-  display: block;
-}
-select, input[type="text"] {
-  width: 100%;
-  padding: 0.5rem 0.65rem;
-  background: var(--bg-input);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--text-bright);
-  font-family: var(--mono);
-  font-size: 0.8rem;
-  outline: none;
-  transition: border-color 0.15s;
-  appearance: none;
-}
-select {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%235a6270'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 0.6rem center;
-  padding-right: 2rem;
-  cursor: pointer;
-}
-select:focus, input:focus { border-color: var(--accent); }
-input[type="range"] {
-  width: 100%;
-  height: 4px;
-  -webkit-appearance: none;
-  appearance: none;
-  background: var(--border);
-  border-radius: 2px;
-  outline: none;
-  margin-top: 0.25rem;
-}
-input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 14px; height: 14px;
-  border-radius: 50%;
-  background: var(--accent);
-  cursor: pointer;
-  border: 2px solid var(--bg);
-  box-shadow: 0 0 4px var(--accent-dim);
-}
-.volume-row {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-.volume-val {
-  font-family: var(--mono);
-  font-size: 0.75rem;
-  color: var(--text-dim);
-  min-width: 1.8rem;
-  text-align: right;
-}
+/* Results */
+.r-head { padding:1rem 1.5rem; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+.r-title { font-family:var(--mono); font-weight:600; font-size:0.85rem; color:var(--text-bright); }
+.r-sub { font-family:var(--mono); font-size:0.7rem; color:var(--text-dim); }
 
-/* ── Buttons ── */
-.btn-row {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-  flex-wrap: wrap;
-}
-.btn {
-  font-family: var(--mono);
-  font-size: 0.75rem;
-  font-weight: 500;
-  padding: 0.45rem 0.85rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--bg-input);
-  color: var(--text);
-  cursor: pointer;
-  transition: all 0.12s;
-  white-space: nowrap;
-}
-.btn:hover { border-color: var(--accent); color: var(--text-bright); }
-.btn:active { transform: scale(0.97); }
-.btn:disabled { opacity: 0.3; cursor: not-allowed; }
-.btn-primary {
-  background: var(--accent);
-  color: var(--bg);
-  border-color: var(--accent);
-  font-weight: 600;
-}
-.btn-primary:hover { background: #00e8bb; border-color: #00e8bb; color: var(--bg); }
-.btn-primary:disabled { background: var(--accent); opacity: 0.3; }
-.btn-stop { border-color: var(--warn); color: var(--warn); }
-.btn-stop:hover { background: var(--warn-dim); }
+.banner { text-align:center; padding:2rem 1.5rem; background:linear-gradient(180deg,rgba(0,212,170,0.06) 0%,transparent 100%); border-bottom:1px solid var(--border); display:none; }
+.banner.show { display:block; }
+.big-num { font-family:var(--mono); font-weight:800; font-size:3.5rem; line-height:1; }
+.big-num.green { color:var(--accent); }
+.big-num.blue { color:var(--orig); }
+.banner-sub { font-family:var(--mono); font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em; margin-top:0.3rem; }
+.banner-detail { font-family:var(--mono); font-size:0.85rem; color:var(--text); margin-top:0.6rem; }
+.banner-detail b { color:var(--text-bright); }
 
-/* ── Metrics ── */
-.metrics {
-  background: var(--bg-panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 0.75rem;
-  margin-bottom: 1rem;
-}
-.metrics-title {
-  font-family: var(--mono);
-  font-size: 0.65rem;
-  font-weight: 500;
-  color: var(--text-dim);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  margin-bottom: 0.5rem;
-}
-.metrics-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.5rem;
-}
-.metric {
-  text-align: center;
-}
-.metric-value {
-  font-family: var(--mono);
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: var(--accent);
-  line-height: 1.2;
-}
-.metric-value.dim { color: var(--text-dim); }
-.metric-label {
-  font-family: var(--mono);
-  font-size: 0.6rem;
-  color: var(--text-dim);
-  margin-top: 0.15rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
+.bars { padding:1.25rem 1.5rem; }
+.bar-g { margin-bottom:1rem; }
+.bar-g:last-child { margin-bottom:0; }
+.bar-top { display:flex; justify-content:space-between; margin-bottom:0.3rem; }
+.bar-n { font-family:var(--mono); font-size:0.72rem; font-weight:500; }
+.bar-n.o { color:var(--orig); }
+.bar-n.n { color:var(--opt); }
+.bar-v { font-family:var(--mono); font-size:0.8rem; font-weight:700; }
+.bar-v.o { color:var(--orig); }
+.bar-v.n { color:var(--opt); }
+.bar-track { height:30px; background:var(--bg-input); border-radius:4px; position:relative; overflow:hidden; }
+.bar-fill { height:100%; border-radius:4px; position:absolute; top:0; left:0; transition:width 0.8s cubic-bezier(0.22,1,0.36,1); display:flex; align-items:center; padding-left:0.6rem; font-family:var(--mono); font-size:0.65rem; font-weight:600; color:rgba(255,255,255,0.9); }
+.bar-fill.o { background:linear-gradient(90deg,var(--orig),#3a7edf); }
+.bar-fill.n { background:linear-gradient(90deg,var(--opt),#00a888); }
 
-/* ── RX area ── */
-.rx-output {
-  background: var(--bg-input);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 0.6rem 0.75rem;
-  font-family: var(--mono);
-  font-size: 0.8rem;
-  min-height: 2.2rem;
-  color: var(--text-dim);
-  margin-bottom: 1rem;
-  word-break: break-all;
-}
-.rx-output.has-data { color: var(--accent); border-color: var(--accent-dim); }
-.rx-output.error { color: var(--warn); border-color: var(--warn-dim); }
+.play-sec { padding:1rem 1.5rem; border-top:1px solid var(--border); display:none; }
+.play-sec.show { display:block; }
+.play-row { display:flex; align-items:center; gap:0.75rem; margin-bottom:0.5rem; }
+.play-row:last-child { margin-bottom:0; }
+.play-dot { width:10px; height:10px; border-radius:50%; background:var(--text-dim); flex-shrink:0; }
+.play-dot.on { background:var(--accent); box-shadow:0 0 10px var(--accent); animation:pulse 0.5s infinite; }
+.play-dot.done { background:var(--accent); box-shadow:none; animation:none; }
+.play-txt { font-family:var(--mono); font-size:0.75rem; color:var(--text-dim); }
+.play-txt.on { color:var(--text-bright); }
 
-.loopback-result {
-  background: var(--bg-input);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 0.6rem 0.75rem;
-  font-family: var(--mono);
-  font-size: 0.8rem;
-  min-height: 2.2rem;
-  color: var(--text-dim);
-  margin-top: 0.5rem;
-}
-.loopback-result.pass { color: var(--accent); border-color: var(--accent-dim); }
-.loopback-result.fail { color: var(--warn); border-color: var(--warn-dim); }
+.wave-sec { padding:0.75rem 1.5rem 1rem; border-top:1px solid var(--border); display:none; }
+.wave-sec.show { display:block; }
+.wave-lbl { font-family:var(--mono); font-size:0.6rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.25rem; }
+canvas { width:100%; height:50px; border-radius:4px; background:var(--bg-input); display:block; margin-bottom:0.5rem; }
 
-/* ── Benchmark ── */
-.benchmark {
-  border-top: 1px solid var(--border);
-  padding: 2rem;
-  position: relative;
-}
-.benchmark::before {
-  content: '';
-  position: absolute;
-  top: -1px;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--accent-dim), transparent);
-}
-.bench-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 1.25rem;
-}
-.bench-header h2 {
-  font-family: var(--mono);
-  font-weight: 600;
-  font-size: 1rem;
-  color: var(--text-bright);
-}
-.bench-progress {
-  font-family: var(--mono);
-  font-size: 0.75rem;
-  color: var(--text-dim);
-}
+.metrics { display:none; grid-template-columns:repeat(4,1fr); border-top:1px solid var(--border); }
+.metrics.show { display:grid; }
+.m-cell { text-align:center; padding:1rem 0.5rem; border-right:1px solid var(--border); }
+.m-cell:last-child { border-right:none; }
+.m-val { font-family:var(--mono); font-weight:700; font-size:1.15rem; color:var(--text-bright); line-height:1.2; }
+.m-val.g { color:var(--accent); }
+.m-key { font-family:var(--mono); font-size:0.55rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.06em; margin-top:0.2rem; }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-family: var(--mono);
-  font-size: 0.78rem;
-}
-thead th {
-  text-align: left;
-  padding: 0.6rem 0.75rem;
-  font-weight: 500;
-  color: var(--text-dim);
-  font-size: 0.65rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  border-bottom: 1px solid var(--border);
-  white-space: nowrap;
-}
-thead th:not(:first-child) { text-align: right; }
-tbody td {
-  padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid var(--border);
-  color: var(--text);
-}
-tbody td:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; }
-tbody tr:hover { background: var(--accent-glow); }
-tbody tr.separator td {
-  padding: 0.25rem 0.75rem;
-  font-size: 0.6rem;
-  color: var(--text-dim);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  background: var(--bg-panel);
-  border-bottom: 1px solid var(--border);
-}
-.speedup-pos { color: var(--accent); font-weight: 600; }
-.speedup-neg { color: var(--warn); font-weight: 600; }
-.speedup-neutral { color: var(--text-dim); }
-.na { color: var(--text-dim); font-style: italic; }
+.rx-card { padding:1.25rem 1.5rem; }
+.rx-row { display:flex; align-items:center; gap:0.75rem; }
+.rx-out { flex:1; font-family:var(--mono); font-size:0.8rem; color:var(--text-dim); padding:0.5rem 0.75rem; background:var(--bg-input); border:1px solid var(--border); border-radius:6px; min-height:2rem; }
+.rx-out.got { color:var(--accent); border-color:var(--accent-dim); }
 
-/* ── Responsive ── */
-@media (max-width: 900px) {
-  .columns { grid-template-columns: 1fr; }
-  .column { padding: 1.25rem; }
-}
-
-/* ── Scrollbar ── */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: var(--bg); }
-::-webkit-scrollbar-thumb { background: var(--border-active); border-radius: 3px; }
-
-/* ── Misc ── */
-.section-label {
-  font-family: var(--mono);
-  font-size: 0.65rem;
-  color: var(--text-dim);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  margin-bottom: 0.5rem;
-  margin-top: 0.5rem;
-}
-.divider {
-  height: 1px;
-  background: var(--border);
-  margin: 1rem 0;
-}
+.foot { text-align:center; padding:2rem; font-family:var(--mono); font-size:0.65rem; color:var(--text-dim); }
+.foot a { color:var(--accent); text-decoration:none; }
+.foot a:hover { text-decoration:underline; }
 </style>
 </head>
 <body>
 
-<div class="header">
-  <h1>ggwave <span class="slash">//</span> Performance Bench</h1>
-  <p>Side-by-side comparison of original vs optimized ggwave builds. Measures encode speed, waveform duration (data throughput), and decode correctness.</p>
-  <div class="status-bar">
-    <div class="status-item">
-      <div class="status-dot loading" id="dot-original"></div>
-      <span id="status-original">Original: loading…</span>
+<div class="hero">
+  <h1>sonic<span>-</span>pipe</h1>
+  <p>Same message, two protocols, side by side. Hear the difference.</p>
+  <div class="status-row">
+    <div class="status-item"><div class="dot wait" id="dot-orig"></div><span id="st-orig">Original: loading</span></div>
+    <div class="status-item"><div class="dot wait" id="dot-opt"></div><span id="st-opt">Optimized: loading</span></div>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="card">
+    <div class="card-body">
+      <div class="lbl">Message to transmit</div>
+      <input type="text" class="msg-input" id="msg" value="Hello sonic-pipe! Testing data over sound.">
+      <div class="proto-row">
+        <div><div class="proto-lbl o">Original Protocol</div><select id="proto-orig"></select></div>
+        <div><div class="proto-lbl n">Optimized Protocol</div><select id="proto-opt"></select></div>
+      </div>
+      <div class="action-row">
+        <button class="btn btn-go" id="btn-go" disabled>Compare &amp; Play</button>
+        <button class="btn" id="btn-enc" disabled>Encode Only</button>
+        <div class="vol-g">Vol <input type="range" id="vol" min="1" max="50" value="10"> <span id="vv">10</span></div>
+      </div>
     </div>
-    <div class="status-item">
-      <div class="status-dot loading" id="dot-optimized"></div>
-      <span id="status-optimized">Optimized: loading…</span>
+  </div>
+
+  <div class="card" id="res-card">
+    <div class="r-head">
+      <div class="r-title">Results</div>
+      <div class="r-sub" id="r-sub">Waiting for comparison</div>
+    </div>
+
+    <div class="banner" id="banner">
+      <div class="big-num green" id="big-pct">—</div>
+      <div class="banner-sub">faster with optimized protocol</div>
+      <div class="banner-detail" id="banner-detail"></div>
+    </div>
+
+    <div class="bars" id="bars" style="display:none">
+      <div class="bar-g">
+        <div class="bar-top"><span class="bar-n o" id="bn-o">Original</span><span class="bar-v o" id="bv-o">—</span></div>
+        <div class="bar-track"><div class="bar-fill o" id="bf-o" style="width:0"></div></div>
+      </div>
+      <div class="bar-g">
+        <div class="bar-top"><span class="bar-n n" id="bn-n">Optimized</span><span class="bar-v n" id="bv-n">—</span></div>
+        <div class="bar-track"><div class="bar-fill n" id="bf-n" style="width:0"></div></div>
+      </div>
+    </div>
+
+    <div class="play-sec" id="play-sec">
+      <div class="play-row"><div class="play-dot" id="pd-o"></div><span class="play-txt" id="pt-o">Original: waiting</span></div>
+      <div class="play-row"><div class="play-dot" id="pd-n"></div><span class="play-txt" id="pt-n">Optimized: waiting</span></div>
+    </div>
+
+    <div class="wave-sec" id="wave-sec">
+      <div class="wave-lbl">Original waveform</div>
+      <canvas id="wc-o" height="50"></canvas>
+      <div class="wave-lbl">Optimized waveform</div>
+      <canvas id="wc-n" height="50"></canvas>
+    </div>
+
+    <div class="metrics" id="met">
+      <div class="m-cell"><div class="m-val" id="mo">—</div><div class="m-key">Original ms</div></div>
+      <div class="m-cell"><div class="m-val g" id="mn">—</div><div class="m-key">Optimized ms</div></div>
+      <div class="m-cell"><div class="m-val g" id="ms2">—</div><div class="m-key">Time saved</div></div>
+      <div class="m-cell"><div class="m-val g" id="mx">—</div><div class="m-key">Speedup</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="rx-card">
+      <div class="lbl" style="margin-bottom:0.5rem">Microphone Receiver</div>
+      <div class="rx-row">
+        <button class="btn" id="rx-go" disabled>Start Listening</button>
+        <button class="btn" id="rx-stop" style="display:none;border-color:var(--warn);color:var(--warn)">Stop</button>
+        <div class="rx-out" id="rx-out">Idle</div>
+      </div>
     </div>
   </div>
 </div>
 
-<div class="columns">
-  <!-- ── Original Column ── -->
-  <div class="column" id="col-original">
-    <div class="column-header">
-      <div class="column-title">Original <span class="tag tag-cdn">CDN v0.4.0</span></div>
-    </div>
-
-    <div class="control-group">
-      <label class="control-label">Protocol</label>
-      <select id="proto-original"></select>
-    </div>
-
-    <div class="control-group">
-      <label class="control-label">TX Message</label>
-      <input type="text" id="msg-original" value="Hello ggwave!">
-    </div>
-
-    <div class="control-group">
-      <label class="control-label">Volume</label>
-      <div class="volume-row">
-        <input type="range" id="vol-original" min="1" max="50" value="10">
-        <span class="volume-val" id="vol-val-original">10</span>
-      </div>
-    </div>
-
-    <div class="btn-row">
-      <button class="btn btn-primary" id="send-original" disabled>Send</button>
-      <button class="btn" id="loop-original" disabled>Loopback Test</button>
-    </div>
-    <div class="loopback-result" id="loop-result-original">—</div>
-
-    <div class="divider"></div>
-
-    <div class="metrics" id="metrics-original">
-      <div class="metrics-title">Last Encode Metrics</div>
-      <div class="metrics-grid">
-        <div class="metric">
-          <div class="metric-value dim" id="m-duration-original">—</div>
-          <div class="metric-label">Duration ms</div>
-        </div>
-        <div class="metric">
-          <div class="metric-value dim" id="m-encode-original">—</div>
-          <div class="metric-label">Encode ms</div>
-        </div>
-        <div class="metric">
-          <div class="metric-value dim" id="m-size-original">—</div>
-          <div class="metric-label">Bytes</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="divider"></div>
-
-    <div class="section-label">Microphone RX</div>
-    <div class="btn-row">
-      <button class="btn" id="rx-start-original" disabled>Start Listening</button>
-      <button class="btn btn-stop" id="rx-stop-original" style="display:none">Stop</button>
-    </div>
-    <div class="rx-output" id="rx-out-original">Idle</div>
-  </div>
-
-  <!-- ── Optimized Column ── -->
-  <div class="column" id="col-optimized">
-    <div class="column-header">
-      <div class="column-title">Optimized <span class="tag tag-local">Local</span></div>
-    </div>
-
-    <div class="control-group">
-      <label class="control-label">Protocol</label>
-      <select id="proto-optimized"></select>
-    </div>
-
-    <div class="control-group">
-      <label class="control-label">TX Message</label>
-      <input type="text" id="msg-optimized" value="Hello ggwave!">
-    </div>
-
-    <div class="control-group">
-      <label class="control-label">Volume</label>
-      <div class="volume-row">
-        <input type="range" id="vol-optimized" min="1" max="50" value="10">
-        <span class="volume-val" id="vol-val-optimized">10</span>
-      </div>
-    </div>
-
-    <div class="btn-row">
-      <button class="btn btn-primary" id="send-optimized" disabled>Send</button>
-      <button class="btn" id="loop-optimized" disabled>Loopback Test</button>
-    </div>
-    <div class="loopback-result" id="loop-result-optimized">—</div>
-
-    <div class="divider"></div>
-
-    <div class="metrics" id="metrics-optimized">
-      <div class="metrics-title">Last Encode Metrics</div>
-      <div class="metrics-grid">
-        <div class="metric">
-          <div class="metric-value dim" id="m-duration-optimized">—</div>
-          <div class="metric-label">Duration ms</div>
-        </div>
-        <div class="metric">
-          <div class="metric-value dim" id="m-encode-optimized">—</div>
-          <div class="metric-label">Encode ms</div>
-        </div>
-        <div class="metric">
-          <div class="metric-value dim" id="m-size-optimized">—</div>
-          <div class="metric-label">Bytes</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="divider"></div>
-
-    <div class="section-label">Microphone RX</div>
-    <div class="btn-row">
-      <button class="btn" id="rx-start-optimized" disabled>Start Listening</button>
-      <button class="btn btn-stop" id="rx-stop-optimized" style="display:none">Stop</button>
-    </div>
-    <div class="rx-output" id="rx-out-optimized">Idle</div>
-  </div>
+<div class="foot">
+  <a href="https://github.com/0xNtive/sonic-pipe">github.com/0xNtive/sonic-pipe</a> &mdash; MIT &mdash; Based on <a href="https://github.com/ggerganov/ggwave">ggwave</a>
 </div>
 
-<!-- ── Benchmark ── -->
-<div class="benchmark">
-  <div class="bench-header">
-    <h2>Encode Benchmark</h2>
-    <div>
-      <span class="bench-progress" id="bench-status"></span>
-      <button class="btn btn-primary" id="bench-run" disabled style="margin-left:0.75rem">Run Benchmark</button>
-    </div>
-  </div>
-  <table>
-    <thead>
-      <tr>
-        <th>Protocol</th>
-        <th>Orig. Duration</th>
-        <th>Opt. Duration</th>
-        <th>Throughput Δ</th>
-        <th>Orig. Encode</th>
-        <th>Opt. Encode</th>
-        <th>Encode Speedup</th>
-      </tr>
-    </thead>
-    <tbody id="bench-body">
-      <tr><td colspan="7" style="color:var(--text-dim);text-align:center;padding:2rem">Press "Run Benchmark" to start</td></tr>
-    </tbody>
-  </table>
-</div>
-
-<!-- ── Scripts ── -->
 <script>
-// ══════════════════════════════════════════
-// Core state
-// ══════════════════════════════════════════
-const SAMPLE_RATE = 48000;
-const BENCH_ITERS = 100;
-
-let ggOriginal = null, ggOptimized = null;
-let instOriginal = null, instOptimized = null;
-let ctxOriginal = null, ctxOptimized = null;
-let recOriginal = null, recOptimized = null;
-let msOriginal = null, msOptimized = null;
-
-// Protocol definitions
-const PROTOCOLS = [
-  { key: 'GGWAVE_PROTOCOL_AUDIBLE_NORMAL',     label: 'Audible Normal',      group: 'audible', turbo: false, inaudible: false },
-  { key: 'GGWAVE_PROTOCOL_AUDIBLE_FAST',       label: 'Audible Fast',        group: 'audible', turbo: false, inaudible: false },
-  { key: 'GGWAVE_PROTOCOL_AUDIBLE_FASTEST',    label: 'Audible Fastest',     group: 'audible', turbo: false, inaudible: false },
-  { key: 'GGWAVE_PROTOCOL_AUDIBLE_TURBO',      label: 'Audible Turbo',       group: 'audible', turbo: true,  inaudible: false },
-  { key: 'GGWAVE_PROTOCOL_AUDIBLE_TURBO_WIDE', label: 'Audible Turbo Wide',  group: 'audible', turbo: true,  inaudible: false },
-  { key: 'GGWAVE_PROTOCOL_ULTRASOUND_NORMAL',  label: 'Ultrasound Normal',   group: 'ultrasound', turbo: false, inaudible: true },
-  { key: 'GGWAVE_PROTOCOL_ULTRASOUND_FAST',    label: 'Ultrasound Fast',     group: 'ultrasound', turbo: false, inaudible: true },
-  { key: 'GGWAVE_PROTOCOL_ULTRASOUND_FASTEST', label: 'Ultrasound Fastest',  group: 'ultrasound', turbo: false, inaudible: true },
-  { key: 'GGWAVE_PROTOCOL_ULTRASOUND_TURBO',   label: 'Ultrasound Turbo',    group: 'ultrasound', turbo: true,  inaudible: true },
-  { key: 'GGWAVE_PROTOCOL_AUDIBLE_ULTRA',      label: 'Audible Ultra',       group: 'ultra', turbo: true,  inaudible: false },
-  { key: 'GGWAVE_PROTOCOL_AUDIBLE_ULTRA_WIDE', label: 'Audible Ultra Wide',  group: 'ultra', turbo: true,  inaudible: false },
-  { key: 'GGWAVE_PROTOCOL_ULTRASOUND_ULTRA',   label: 'Ultrasound Ultra',    group: 'ultra', turbo: true,  inaudible: true },
-  { key: 'GGWAVE_PROTOCOL_DT_NORMAL',          label: 'DT Normal',           group: 'dt', turbo: false, inaudible: false },
-  { key: 'GGWAVE_PROTOCOL_DT_FAST',            label: 'DT Fast',             group: 'dt', turbo: false, inaudible: false },
-  { key: 'GGWAVE_PROTOCOL_DT_FASTEST',         label: 'DT Fastest',          group: 'dt', turbo: false, inaudible: false },
+var SR=48000, ggO=null, ggN=null, iO=null, iN=null, actx=null;
+var P=[
+  {k:'GGWAVE_PROTOCOL_AUDIBLE_NORMAL',     l:'Audible Normal',      ear:1, t:0},
+  {k:'GGWAVE_PROTOCOL_AUDIBLE_FAST',       l:'Audible Fast',        ear:1, t:0},
+  {k:'GGWAVE_PROTOCOL_AUDIBLE_FASTEST',    l:'Audible Fastest',     ear:1, t:0},
+  {k:'GGWAVE_PROTOCOL_AUDIBLE_TURBO',      l:'Audible Turbo',       ear:1, t:1},
+  {k:'GGWAVE_PROTOCOL_AUDIBLE_TURBO_WIDE', l:'Audible Turbo Wide',  ear:1, t:1},
+  {k:'GGWAVE_PROTOCOL_AUDIBLE_ULTRA',      l:'Audible Ultra',       ear:1, t:1},
+  {k:'GGWAVE_PROTOCOL_AUDIBLE_ULTRA_WIDE', l:'Audible Ultra Wide',  ear:1, t:1},
+  {k:'GGWAVE_PROTOCOL_ULTRASOUND_NORMAL',  l:'Ultrasound Normal',   ear:0, t:0},
+  {k:'GGWAVE_PROTOCOL_ULTRASOUND_FAST',    l:'Ultrasound Fast',     ear:0, t:0},
+  {k:'GGWAVE_PROTOCOL_ULTRASOUND_FASTEST', l:'Ultrasound Fastest',  ear:0, t:0},
+  {k:'GGWAVE_PROTOCOL_ULTRASOUND_TURBO',   l:'Ultrasound Turbo',    ear:0, t:1},
+  {k:'GGWAVE_PROTOCOL_ULTRASOUND_ULTRA',   l:'Ultrasound Ultra',    ear:0, t:1},
+  {k:'GGWAVE_PROTOCOL_DT_NORMAL',          l:'DT Normal',           ear:1, t:0},
+  {k:'GGWAVE_PROTOCOL_DT_FAST',            l:'DT Fast',             ear:1, t:0},
+  {k:'GGWAVE_PROTOCOL_DT_FASTEST',         l:'DT Fastest',          ear:1, t:0},
 ];
+function cv(s,T){var b=new ArrayBuffer(s.byteLength);new s.constructor(b).set(s);return new T(b);}
+function gp(g,k){try{return g.ProtocolId[k]}catch(e){return null}}
+function mkI(g){var p=g.getDefaultParameters();p.sampleRateInp=SR;p.sampleRateOut=SR;return g.init(p);}
+function ctx(){if(!actx)actx=new(window.AudioContext||window.webkitAudioContext)({sampleRate:SR});return actx;}
 
-// ══════════════════════════════════════════
-// Helpers
-// ══════════════════════════════════════════
-function convertTypedArray(src, type) {
-  var buffer = new ArrayBuffer(src.byteLength);
-  new src.constructor(buffer).set(src);
-  return new type(buffer);
-}
-
-function getProtoId(gg, key) {
-  try { return gg.ProtocolId[key]; }
-  catch(e) { return null; }
-}
-
-function setStatus(side, text, state) {
-  document.getElementById('status-' + side).textContent = text;
-  var dot = document.getElementById('dot-' + side);
-  dot.className = 'status-dot ' + state;
-}
-
-function populateSelect(selectId, side) {
-  var sel = document.getElementById(selectId);
-  sel.innerHTML = '';
-  var gg = side === 'original' ? ggOriginal : ggOptimized;
-
-  var currentGroup = '';
-  PROTOCOLS.forEach(function(p) {
-    if (p.group !== currentGroup) {
-      if (currentGroup !== '') {
-        var sep = document.createElement('option');
-        sep.disabled = true;
-        sep.textContent = '───────────────';
-        sel.appendChild(sep);
-      }
-      currentGroup = p.group;
-    }
-    var opt = document.createElement('option');
-    var available = gg && getProtoId(gg, p.key) !== null && getProtoId(gg, p.key) !== undefined;
-    var label = p.label;
-    if (p.inaudible) {
-      label = '\uD83D\uDD07 ' + label; // 🔇 muted speaker
-    } else {
-      label = '\uD83D\uDD0A ' + label; // 🔊 speaker
-    }
-    if (p.turbo && side === 'original') {
-      label += '  [N/A]';
-      opt.disabled = true;
-    } else if (p.turbo) {
-      label += '  ★';
-    }
-    if (!available && !p.turbo) {
-      opt.disabled = true;
-    }
-    opt.value = p.key;
-    opt.textContent = label;
-    sel.appendChild(opt);
+function fillSel(sel,gg,side){
+  sel.innerHTML='';var le=null;
+  P.forEach(function(p){
+    if(le!==null&&p.ear!==le){var s=document.createElement('option');s.disabled=true;s.textContent='\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500';sel.appendChild(s);}
+    le=p.ear;
+    var o=document.createElement('option');
+    var ic=p.ear?'\uD83D\uDD0A ':'\uD83D\uDD07 ';
+    var lb=ic+p.l;
+    var av=gg&&gp(gg,p.k)!==null&&gp(gg,p.k)!==undefined;
+    if(p.t&&side==='o'){lb+='  [N/A]';o.disabled=true;}
+    else if(p.t){lb+='  \u2605';}
+    if(!p.ear)lb+='  (inaudible)';
+    if(!av&&!p.t)o.disabled=true;
+    o.value=p.k;o.textContent=lb;sel.appendChild(o);
   });
 }
 
-// ══════════════════════════════════════════
-// Init ggwave modules
-// ══════════════════════════════════════════
-function initInstance(gg) {
-  var params = gg.getDefaultParameters();
-  params.sampleRateInp = SAMPLE_RATE;
-  params.sampleRateOut = SAMPLE_RATE;
-  return gg.init(params);
-}
+function loadO(){return new Promise(function(ok){
+  var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/ggwave@0.4.0/ggwave.js';
+  s.onload=function(){var f=ggwave_factory;f().then(function(m){ggO=m;iO=mkI(m);document.getElementById('st-orig').textContent='Original: ready';document.getElementById('dot-orig').className='dot ok';fillSel(document.getElementById('proto-orig'),ggO,'o');ok(1);}).catch(function(){document.getElementById('st-orig').textContent='Original: error';document.getElementById('dot-orig').className='dot err';ok(0);});};
+  s.onerror=function(){document.getElementById('st-orig').textContent='Original: CDN failed';document.getElementById('dot-orig').className='dot err';ok(0);};
+  document.head.appendChild(s);
+});}
 
-function enableControls(side) {
-  document.getElementById('send-' + side).disabled = false;
-  document.getElementById('loop-' + side).disabled = false;
-  document.getElementById('rx-start-' + side).disabled = false;
-}
+function loadN(){return new Promise(function(ok){
+  var s=document.createElement('script');s.src='./ggwave.js';
+  s.onload=function(){var f=ggwave_factory;f().then(function(m){ggN=m;iN=mkI(m);document.getElementById('st-opt').textContent='Optimized: ready';document.getElementById('dot-opt').className='dot ok';fillSel(document.getElementById('proto-opt'),ggN,'n');ok(1);}).catch(function(){document.getElementById('st-opt').textContent='Optimized: error';document.getElementById('dot-opt').className='dot err';ok(0);});};
+  s.onerror=function(){document.getElementById('st-opt').textContent='Optimized: not found';document.getElementById('dot-opt').className='dot err';ok(0);};
+  document.head.appendChild(s);
+});}
 
-// Sequential loading: CDN first (saves factory ref), then local (overwrites global)
-// If CDN fails, local still loads independently.
-
-function loadOriginal() {
-  return new Promise(function(resolve) {
-    var script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/ggwave@0.4.0/ggwave.js';
-    script.onload = function() {
-      var factory = ggwave_factory; // save before local overwrites
-      factory().then(function(obj) {
-        ggOriginal = obj;
-        instOriginal = initInstance(ggOriginal);
-        setStatus('original', 'Original: ready (v0.4.0)', 'ready');
-        populateSelect('proto-original', 'original');
-        enableControls('original');
-        checkBenchReady();
-        resolve(true);
-      }).catch(function(e) {
-        setStatus('original', 'Original: init error — ' + e.message, 'error');
-        resolve(false);
-      });
-    };
-    script.onerror = function() {
-      setStatus('original', 'Original: CDN load failed', 'error');
-      resolve(false);
-    };
-    document.head.appendChild(script);
-  });
-}
-
-function loadOptimized() {
-  return new Promise(function(resolve) {
-    var script = document.createElement('script');
-    script.src = './ggwave.js';
-    script.onload = function() {
-      var factory = ggwave_factory; // may be local or CDN depending on load order
-      factory().then(function(obj) {
-        ggOptimized = obj;
-        instOptimized = initInstance(ggOptimized);
-        setStatus('optimized', 'Optimized: ready (local)', 'ready');
-        populateSelect('proto-optimized', 'optimized');
-        enableControls('optimized');
-        checkBenchReady();
-        resolve(true);
-      }).catch(function(e) {
-        setStatus('optimized', 'Optimized: init error — ' + e.message, 'error');
-        resolve(false);
-      });
-    };
-    script.onerror = function() {
-      setStatus('optimized', 'Optimized: ./ggwave.js not found — compile with emscripten', 'error');
-      populateSelect('proto-optimized', 'optimized');
-      resolve(false);
-    };
-    document.head.appendChild(script);
-  });
-}
-
-// Load CDN first, then local (so we can save the CDN factory before local overwrites it)
-loadOriginal().then(function() {
-  return loadOptimized();
+loadO().then(function(){return loadN()}).then(function(){
+  if(ggO||ggN){document.getElementById('btn-go').disabled=false;document.getElementById('btn-enc').disabled=false;document.getElementById('rx-go').disabled=false;}
+  var s=document.getElementById('proto-opt');
+  for(var i=0;i<s.options.length;i++){if(s.options[i].value==='GGWAVE_PROTOCOL_AUDIBLE_ULTRA_WIDE'){s.selectedIndex=i;break;}}
 });
 
-function checkBenchReady() {
-  if (ggOriginal || ggOptimized) {
-    document.getElementById('bench-run').disabled = false;
+function drawW(cid,wf){
+  var c=document.getElementById(cid),x=c.getContext('2d'),W=c.width=c.offsetWidth*2,H=c.height=100;
+  x.clearRect(0,0,W,H);var f=cv(wf,Float32Array),st=Math.max(1,Math.floor(f.length/W)),mid=H/2;
+  var isO=cid.includes('-o'),col=isO?'rgba(74,158,255,':'rgba(0,212,170,';
+  x.beginPath();x.moveTo(0,mid);
+  for(var i=0;i<W&&i*st<f.length;i++){var v=0;for(var j=0;j<st&&i*st+j<f.length;j++)v=Math.max(v,Math.abs(f[i*st+j]));x.lineTo(i,mid-v*mid*0.9);}
+  for(var i=W-1;i>=0&&i*st<f.length;i--){var v=0;for(var j=0;j<st&&i*st+j<f.length;j++)v=Math.max(v,Math.abs(f[i*st+j]));x.lineTo(i,mid+v*mid*0.9);}
+  x.closePath();var g=x.createLinearGradient(0,0,0,H);g.addColorStop(0,col+'0.6)');g.addColorStop(0.5,col+'0.15)');g.addColorStop(1,col+'0.6)');x.fillStyle=g;x.fill();
+}
+
+function enc(gg,inst,pk,msg,vol){
+  var p=gp(gg,pk);if(p===null||p===undefined)return null;
+  var t0=performance.now(),wf=gg.encode(inst,msg,p,vol),t1=performance.now();
+  return{wf:wf,eMs:t1-t0,dMs:(wf.length/4/SR)*1000,sz:wf.length};
+}
+
+function playW(wf){
+  var c=ctx();c.resume();var b=cv(wf,Float32Array),ab=c.createBuffer(1,b.length,SR);
+  ab.getChannelData(0).set(b);var s=c.createBufferSource();s.buffer=ab;s.connect(c.destination);
+  return new Promise(function(ok){s.onended=ok;s.start(0);});
+}
+
+function show(oR,nR,oL,nL){
+  document.getElementById('bars').style.display='block';
+  document.getElementById('wave-sec').className='wave-sec show';
+  document.getElementById('met').className='metrics show';
+  var oMs=oR?oR.dMs:0,nMs=nR?nR.dMs:0,mx=Math.max(oMs,nMs);
+  document.getElementById('bn-o').textContent=oL;
+  document.getElementById('bn-n').textContent=nL;
+  document.getElementById('bv-o').textContent=oMs.toFixed(0)+' ms';
+  document.getElementById('bv-n').textContent=nMs.toFixed(0)+' ms';
+  setTimeout(function(){
+    document.getElementById('bf-o').style.width=(oMs/mx*100).toFixed(1)+'%';
+    document.getElementById('bf-o').textContent=oMs.toFixed(0)+'ms';
+    document.getElementById('bf-n').style.width=(nMs/mx*100).toFixed(1)+'%';
+    document.getElementById('bf-n').textContent=nMs.toFixed(0)+'ms';
+  },50);
+  if(oR)drawW('wc-o',oR.wf);
+  if(nR)drawW('wc-n',nR.wf);
+  if(oR&&nR&&oMs>0){
+    var sv=oMs-nMs,pct=sv/oMs*100,spd=oMs/nMs;
+    var bn=document.getElementById('banner');bn.className='banner show';
+    document.getElementById('big-pct').textContent=pct.toFixed(0)+'%';
+    document.getElementById('banner-detail').innerHTML='<b>'+sv.toFixed(0)+' ms</b> saved &mdash; '+oMs.toFixed(0)+' ms \u2192 '+nMs.toFixed(0)+' ms &mdash; <b>'+spd.toFixed(1)+'x</b> faster';
+    document.getElementById('mo').textContent=oMs.toFixed(0);
+    document.getElementById('mn').textContent=nMs.toFixed(0);
+    document.getElementById('ms2').textContent='-'+sv.toFixed(0)+'ms';
+    document.getElementById('mx').textContent=spd.toFixed(1)+'x';
   }
 }
 
-// ══════════════════════════════════════════
-// Audio context
-// ══════════════════════════════════════════
-function getCtx(side) {
-  if (side === 'original') {
-    if (!ctxOriginal) ctxOriginal = new (window.AudioContext || window.webkitAudioContext)({sampleRate: SAMPLE_RATE});
-    return ctxOriginal;
-  } else {
-    if (!ctxOptimized) ctxOptimized = new (window.AudioContext || window.webkitAudioContext)({sampleRate: SAMPLE_RATE});
-    return ctxOptimized;
+function run(play){
+  var msg=document.getElementById('msg').value,vol=parseInt(document.getElementById('vol').value);
+  var ok=document.getElementById('proto-orig').value,nk=document.getElementById('proto-opt').value;
+  var oL=document.getElementById('proto-orig').selectedOptions[0].textContent.trim();
+  var nL=document.getElementById('proto-opt').selectedOptions[0].textContent.trim();
+  var oR=ggO?enc(ggO,iO,ok,msg,vol):null;
+  var nR=ggN?enc(ggN,iN,nk,msg,vol):null;
+  document.getElementById('r-sub').textContent=msg.length+' bytes, vol '+vol;
+  show(oR,nR,oL,nL);
+
+  if(play&&(oR||nR)){
+    var ps=document.getElementById('play-sec');ps.className='play-sec show';
+    document.getElementById('btn-go').disabled=true;
+    document.getElementById('btn-enc').disabled=true;
+    document.getElementById('pd-o').className='play-dot';
+    document.getElementById('pd-n').className='play-dot';
+    document.getElementById('pt-o').textContent='Original: waiting';
+    document.getElementById('pt-o').className='play-txt';
+    document.getElementById('pt-n').textContent='Optimized: waiting';
+    document.getElementById('pt-n').className='play-txt';
+    var c=Promise.resolve();
+    if(oR){c=c.then(function(){
+      document.getElementById('pd-o').className='play-dot on';
+      document.getElementById('pt-o').className='play-txt on';
+      document.getElementById('pt-o').textContent='Original: playing ('+oR.dMs.toFixed(0)+'ms)...';
+      return playW(oR.wf);
+    }).then(function(){
+      document.getElementById('pd-o').className='play-dot done';
+      document.getElementById('pt-o').textContent='Original: done \u2714 ('+oR.dMs.toFixed(0)+'ms)';
+      document.getElementById('pt-o').className='play-txt';
+      return new Promise(function(ok){setTimeout(ok,500);});
+    });}
+    if(nR){c=c.then(function(){
+      document.getElementById('pd-n').className='play-dot on';
+      document.getElementById('pt-n').className='play-txt on';
+      document.getElementById('pt-n').textContent='Optimized: playing ('+nR.dMs.toFixed(0)+'ms)...';
+      return playW(nR.wf);
+    }).then(function(){
+      document.getElementById('pd-n').className='play-dot done';
+      document.getElementById('pt-n').textContent='Optimized: done \u2714 ('+nR.dMs.toFixed(0)+'ms)';
+      document.getElementById('pt-n').className='play-txt';
+    });}
+    c.then(function(){document.getElementById('btn-go').disabled=false;document.getElementById('btn-enc').disabled=false;});
   }
 }
 
-// ══════════════════════════════════════════
-// Encode + Play
-// ══════════════════════════════════════════
-function doEncode(side) {
-  var gg = side === 'original' ? ggOriginal : ggOptimized;
-  var inst = side === 'original' ? instOriginal : instOptimized;
-  if (!gg || inst === null) return null;
-
-  var msg = document.getElementById('msg-' + side).value;
-  var vol = parseInt(document.getElementById('vol-' + side).value);
-  var protoKey = document.getElementById('proto-' + side).value;
-  var protoId = getProtoId(gg, protoKey);
-  if (protoId === null || protoId === undefined) return null;
-
-  var t0 = performance.now();
-  var waveform = gg.encode(inst, msg, protoId, vol);
-  var t1 = performance.now();
-
-  var encodeMs = t1 - t0;
-  var samples = waveform.length / 4; // F32 = 4 bytes per sample
-  var durationMs = (samples / SAMPLE_RATE) * 1000;
-
-  document.getElementById('m-duration-' + side).textContent = durationMs.toFixed(0);
-  document.getElementById('m-duration-' + side).className = 'metric-value';
-  document.getElementById('m-encode-' + side).textContent = encodeMs.toFixed(2);
-  document.getElementById('m-encode-' + side).className = 'metric-value';
-  document.getElementById('m-size-' + side).textContent = waveform.length.toLocaleString();
-  document.getElementById('m-size-' + side).className = 'metric-value';
-
-  return { waveform: waveform, encodeMs: encodeMs, durationMs: durationMs };
-}
-
-function doSend(side) {
-  var result = doEncode(side);
-  if (!result) return;
-
-  var ctx = getCtx(side);
-  ctx.resume();
-  var buf = convertTypedArray(result.waveform, Float32Array);
-  var buffer = ctx.createBuffer(1, buf.length, ctx.sampleRate);
-  buffer.getChannelData(0).set(buf);
-  var source = ctx.createBufferSource();
-  source.buffer = buffer;
-  source.connect(ctx.destination);
-  source.start(0);
-}
-
-// ══════════════════════════════════════════
-// Loopback test
-// ══════════════════════════════════════════
-function doLoopback(side) {
-  var gg = side === 'original' ? ggOriginal : ggOptimized;
-  var inst = side === 'original' ? instOriginal : instOptimized;
-  var el = document.getElementById('loop-result-' + side);
-
-  var result = doEncode(side);
-  if (!result) {
-    el.textContent = 'Encode failed (protocol N/A?)';
-    el.className = 'loopback-result fail';
-    return;
-  }
-
-  // Feed waveform back into decoder in chunks
-  var waveform = result.waveform;
-  var chunkSize = 1024 * 4; // 1024 samples * 4 bytes (F32)
-  var decoded = null;
-  for (var i = 0; i < waveform.length; i += chunkSize) {
-    var end = Math.min(i + chunkSize, waveform.length);
-    var chunk = new Int8Array(waveform.buffer, waveform.byteOffset + i, end - i);
-    var res = gg.decode(inst, chunk);
-    if (res && res.length > 0) {
-      decoded = new TextDecoder('utf-8').decode(res);
-      break;
-    }
-  }
-
-  var msg = document.getElementById('msg-' + side).value;
-  if (decoded !== null) {
-    if (decoded === msg) {
-      el.textContent = '✓ PASS — decoded: "' + decoded + '"';
-      el.className = 'loopback-result pass';
-    } else {
-      el.textContent = '✗ MISMATCH — got: "' + decoded + '" expected: "' + msg + '"';
-      el.className = 'loopback-result fail';
-    }
-  } else {
-    el.textContent = '… no decode (may need more frames or variable-length markers)';
-    el.className = 'loopback-result';
-  }
-
-  // Re-init instance to clear decoder state
-  if (side === 'original') {
-    ggOriginal.free(instOriginal);
-    instOriginal = initInstance(ggOriginal);
-  } else {
-    ggOptimized.free(instOptimized);
-    instOptimized = initInstance(ggOptimized);
-  }
-}
-
-// ══════════════════════════════════════════
-// Microphone RX
-// ══════════════════════════════════════════
-function startRx(side) {
-  var gg = side === 'original' ? ggOriginal : ggOptimized;
-  var inst = side === 'original' ? instOriginal : instOptimized;
-  var ctx = getCtx(side);
-  ctx.resume();
-
-  var rxOut = document.getElementById('rx-out-' + side);
-  rxOut.textContent = 'Listening…';
-  rxOut.className = 'rx-output';
-
-  document.getElementById('rx-start-' + side).style.display = 'none';
-  document.getElementById('rx-stop-' + side).style.display = '';
-
-  navigator.mediaDevices.getUserMedia({
-    audio: { echoCancellation: false, autoGainControl: false, noiseSuppression: false }
-  }).then(function(stream) {
-    var mediaStream = ctx.createMediaStreamSource(stream);
-    var recorder = ctx.createScriptProcessor(1024, 1, 1);
-
-    recorder.onaudioprocess = function(e) {
-      var input = new Float32Array(e.inputBuffer.getChannelData(0));
-      var res = gg.decode(inst, convertTypedArray(input, Int8Array));
-      if (res && res.length > 0) {
-        var text = new TextDecoder('utf-8').decode(res);
-        rxOut.textContent = text;
-        rxOut.className = 'rx-output has-data';
-      }
-    };
-
-    mediaStream.connect(recorder);
-    recorder.connect(ctx.destination);
-
-    if (side === 'original') {
-      recOriginal = recorder;
-      msOriginal = mediaStream;
-    } else {
-      recOptimized = recorder;
-      msOptimized = mediaStream;
-    }
-  }).catch(function(e) {
-    rxOut.textContent = 'Mic error: ' + e.message;
-    rxOut.className = 'rx-output error';
+// RX
+var rR=null,rM=null;
+function rxGo(){
+  var gg=ggN||ggO,inst=ggN?iN:iO,c=ctx();c.resume();
+  document.getElementById('rx-go').style.display='none';
+  document.getElementById('rx-stop').style.display='';
+  document.getElementById('rx-out').textContent='Listening...';
+  document.getElementById('rx-out').className='rx-out';
+  navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,autoGainControl:false,noiseSuppression:false}}).then(function(s){
+    rM=c.createMediaStreamSource(s);rR=c.createScriptProcessor(1024,1,1);
+    rR.onaudioprocess=function(e){var i=new Float32Array(e.inputBuffer.getChannelData(0));var r=gg.decode(inst,cv(i,Int8Array));if(r&&r.length>0){document.getElementById('rx-out').textContent=new TextDecoder('utf-8').decode(r);document.getElementById('rx-out').className='rx-out got';}};
+    rM.connect(rR);rR.connect(c.destination);
   });
 }
-
-function stopRx(side) {
-  var rec = side === 'original' ? recOriginal : recOptimized;
-  var ms = side === 'original' ? msOriginal : msOptimized;
-  var ctx = getCtx(side);
-
-  if (rec) {
-    rec.disconnect(ctx.destination);
-    if (ms) ms.disconnect(rec);
-  }
-  if (side === 'original') { recOriginal = null; msOriginal = null; }
-  else { recOptimized = null; msOptimized = null; }
-
-  document.getElementById('rx-start-' + side).style.display = '';
-  document.getElementById('rx-stop-' + side).style.display = 'none';
-  document.getElementById('rx-out-' + side).textContent = 'Idle';
-  document.getElementById('rx-out-' + side).className = 'rx-output';
+function rxStop(){
+  if(rR){rR.disconnect();if(rM)rM.disconnect(rR);rR=null;rM=null;}
+  document.getElementById('rx-go').style.display='';document.getElementById('rx-stop').style.display='none';
+  document.getElementById('rx-out').textContent='Idle';document.getElementById('rx-out').className='rx-out';
 }
 
-// ══════════════════════════════════════════
-// Benchmark
-// ══════════════════════════════════════════
-async function runBenchmark() {
-  var btn = document.getElementById('bench-run');
-  var statusEl = document.getElementById('bench-status');
-  var tbody = document.getElementById('bench-body');
-  btn.disabled = true;
-
-  var msg = 'Hello ggwave! Test benchmark message.'; // 38 bytes
-  var volume = 10;
-
-  var rows = [];
-  var totalProtos = PROTOCOLS.length;
-
-  tbody.innerHTML = '<tr><td colspan="7" style="color:var(--text-dim);text-align:center;padding:1.5rem">Running…</td></tr>';
-
-  // Small delay to let UI update
-  await new Promise(function(r) { setTimeout(r, 50); });
-
-  for (var pi = 0; pi < PROTOCOLS.length; pi++) {
-    var p = PROTOCOLS[pi];
-    statusEl.textContent = 'Testing ' + (pi + 1) + '/' + totalProtos + ': ' + p.label;
-
-    // Original
-    var origDuration = null, origEncode = null;
-    if (ggOriginal && !p.turbo) {
-      var protoId = getProtoId(ggOriginal, p.key);
-      if (protoId !== null && protoId !== undefined) {
-        // Warmup
-        ggOriginal.encode(instOriginal, msg, protoId, volume);
-
-        var t0 = performance.now();
-        var wf = null;
-        for (var i = 0; i < BENCH_ITERS; i++) {
-          wf = ggOriginal.encode(instOriginal, msg, protoId, volume);
-        }
-        var t1 = performance.now();
-        origEncode = (t1 - t0) / BENCH_ITERS;
-        origDuration = (wf.length / 4 / SAMPLE_RATE) * 1000;
-      }
-    }
-
-    // Optimized
-    var optDuration = null, optEncode = null;
-    if (ggOptimized) {
-      var protoIdOpt = getProtoId(ggOptimized, p.key);
-      if (protoIdOpt !== null && protoIdOpt !== undefined) {
-        // Warmup
-        ggOptimized.encode(instOptimized, msg, protoIdOpt, volume);
-
-        var t0 = performance.now();
-        var wf = null;
-        for (var i = 0; i < BENCH_ITERS; i++) {
-          wf = ggOptimized.encode(instOptimized, msg, protoIdOpt, volume);
-        }
-        var t1 = performance.now();
-        optEncode = (t1 - t0) / BENCH_ITERS;
-        optDuration = (wf.length / 4 / SAMPLE_RATE) * 1000;
-      }
-    }
-
-    rows.push({ proto: p, origDuration: origDuration, optDuration: optDuration, origEncode: origEncode, optEncode: optEncode });
-
-    // Yield to UI
-    await new Promise(function(r) { setTimeout(r, 10); });
-  }
-
-  // Render table
-  tbody.innerHTML = '';
-  var currentGroup = '';
-  rows.forEach(function(r) {
-    if (r.proto.group !== currentGroup) {
-      currentGroup = r.proto.group;
-      var groupLabels = { audible: 'Audible Band', ultrasound: 'Ultrasound Band', ultra: 'Ultra (New)', dt: 'Data Transfer' };
-      var sepRow = document.createElement('tr');
-      sepRow.className = 'separator';
-      sepRow.innerHTML = '<td colspan="7">' + (groupLabels[currentGroup] || currentGroup) + '</td>';
-      tbody.appendChild(sepRow);
-    }
-
-    var tr = document.createElement('tr');
-
-    // Protocol name
-    var nameTd = document.createElement('td');
-    var icon = r.proto.inaudible ? '\uD83D\uDD07 ' : '\uD83D\uDD0A ';
-    nameTd.textContent = icon + r.proto.label;
-    if (r.proto.turbo) {
-      nameTd.innerHTML += ' <span class="tag tag-new">new</span>';
-    }
-    if (r.proto.inaudible) {
-      nameTd.innerHTML += ' <span class="tag" style="background:var(--blue-dim);color:var(--blue);font-size:0.55rem">inaudible</span>';
-    }
-    tr.appendChild(nameTd);
-
-    // Orig duration
-    tr.appendChild(makeTd(r.origDuration, 'ms', r.proto.turbo));
-    // Opt duration
-    tr.appendChild(makeTd(r.optDuration, 'ms', false));
-    // Throughput delta
-    tr.appendChild(makeSpeedupTd(r.origDuration, r.optDuration, true));
-    // Orig encode
-    tr.appendChild(makeTd(r.origEncode, 'ms', r.proto.turbo));
-    // Opt encode
-    tr.appendChild(makeTd(r.optEncode, 'ms', false));
-    // Encode speedup
-    tr.appendChild(makeSpeedupTd(r.origEncode, r.optEncode, false));
-
-    tbody.appendChild(tr);
-  });
-
-  statusEl.textContent = 'Done — ' + BENCH_ITERS + ' iterations per protocol, ' + msg.length + ' byte payload';
-  btn.disabled = false;
-}
-
-function makeTd(val, unit, isNa) {
-  var td = document.createElement('td');
-  if (val === null) {
-    td.innerHTML = '<span class="na">' + (isNa ? 'N/A' : '—') + '</span>';
-  } else {
-    td.textContent = val.toFixed(1) + ' ' + unit;
-  }
-  return td;
-}
-
-function makeSpeedupTd(orig, opt, isDuration) {
-  var td = document.createElement('td');
-  if (orig === null || opt === null) {
-    if (opt !== null && orig === null) {
-      td.innerHTML = '<span class="tag tag-new">new</span>';
-    } else {
-      td.innerHTML = '<span class="na">—</span>';
-    }
-    return td;
-  }
-  // For duration: lower is better; for encode: lower is better
-  var ratio = orig / opt;
-  var pct = ((ratio - 1) * 100).toFixed(0);
-  if (ratio > 1.02) {
-    td.innerHTML = '<span class="speedup-pos">' + ratio.toFixed(2) + 'x (' + (isDuration ? '−' + ((1 - opt/orig)*100).toFixed(0) : '+' + pct) + '%)</span>';
-  } else if (ratio < 0.98) {
-    var slower = (1/ratio).toFixed(2);
-    td.innerHTML = '<span class="speedup-neg">' + slower + 'x slower</span>';
-  } else {
-    td.innerHTML = '<span class="speedup-neutral">~1.00x</span>';
-  }
-  return td;
-}
-
-// ══════════════════════════════════════════
-// Event Bindings
-// ══════════════════════════════════════════
-['original', 'optimized'].forEach(function(side) {
-  document.getElementById('send-' + side).addEventListener('click', function() { doSend(side); });
-  document.getElementById('loop-' + side).addEventListener('click', function() { doLoopback(side); });
-  document.getElementById('rx-start-' + side).addEventListener('click', function() { startRx(side); });
-  document.getElementById('rx-stop-' + side).addEventListener('click', function() { stopRx(side); });
-  document.getElementById('vol-' + side).addEventListener('input', function(e) {
-    document.getElementById('vol-val-' + side).textContent = e.target.value;
-  });
-});
-
-document.getElementById('bench-run').addEventListener('click', runBenchmark);
+document.getElementById('btn-go').addEventListener('click',function(){run(true);});
+document.getElementById('btn-enc').addEventListener('click',function(){run(false);});
+document.getElementById('rx-go').addEventListener('click',rxGo);
+document.getElementById('rx-stop').addEventListener('click',rxStop);
+document.getElementById('vol').addEventListener('input',function(e){document.getElementById('vv').textContent=e.target.value;});
 </script>
 </body>
 </html>
