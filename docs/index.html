@@ -134,7 +134,7 @@ canvas { width:100%; height:50px; border-radius:4px; background:var(--bg-input);
 
 <div class="hero">
   <h1>sonic<span>-</span>pipe</h1>
-  <p>Same message, two protocols, side by side. Hear the difference.</p>
+  <p>Same message, same protocol, two builds. The optimized build uses fewer marker frames — hear the difference.</p>
   <div class="status-row">
     <div class="status-item"><div class="dot wait" id="dot-orig"></div><span id="st-orig">Original: loading</span></div>
     <div class="status-item"><div class="dot wait" id="dot-opt"></div><span id="st-opt">Optimized: loading</span></div>
@@ -146,9 +146,12 @@ canvas { width:100%; height:50px; border-radius:4px; background:var(--bg-input);
     <div class="card-body">
       <div class="lbl">Message to transmit</div>
       <input type="text" class="msg-input" id="msg" value="Hello sonic-pipe! Testing data over sound.">
-      <div class="proto-row">
-        <div><div class="proto-lbl o">Original Protocol</div><select id="proto-orig"></select></div>
-        <div><div class="proto-lbl n">Optimized Protocol</div><select id="proto-opt"></select></div>
+      <div style="margin-top:1rem">
+        <div class="lbl">Protocol (same for both builds)</div>
+        <select id="proto"></select>
+        <div style="font-family:var(--mono);font-size:0.6rem;color:var(--text-dim);margin-top:0.4rem">
+          Original ggwave uses 16 marker frames &mdash; sonic-pipe uses 8. Same protocol, less overhead.
+        </div>
       </div>
       <div class="action-row">
         <button class="btn btn-go" id="btn-go" disabled>Compare &amp; Play</button>
@@ -166,7 +169,7 @@ canvas { width:100%; height:50px; border-radius:4px; background:var(--bg-input);
 
     <div class="banner" id="banner">
       <div class="big-num green" id="big-pct">—</div>
-      <div class="banner-sub">faster with optimized protocol</div>
+      <div class="banner-sub">faster with sonic-pipe</div>
       <div class="banner-detail" id="banner-detail"></div>
     </div>
 
@@ -228,49 +231,45 @@ canvas { width:100%; height:50px; border-radius:4px; background:var(--bg-input);
 
 <script>
 var SR=48000, ggO=null, ggN=null, iO=null, iN=null, actx=null;
+// Only protocols that work reliably over speakers→air→mic
 var P=[
-  {k:'GGWAVE_PROTOCOL_AUDIBLE_NORMAL',     l:'Normal',       t:0},
-  {k:'GGWAVE_PROTOCOL_AUDIBLE_FAST',       l:'Fast',         t:0},
-  {k:'GGWAVE_PROTOCOL_AUDIBLE_FASTEST',    l:'Fastest',      t:0},
-  {k:'GGWAVE_PROTOCOL_AUDIBLE_TURBO',      l:'Turbo',        t:1},
-  {k:'GGWAVE_PROTOCOL_AUDIBLE_TURBO_WIDE', l:'Turbo Wide',   t:1},
+  {k:'GGWAVE_PROTOCOL_AUDIBLE_NORMAL',  l:'Audible Normal  (~10 B/s)'},
+  {k:'GGWAVE_PROTOCOL_AUDIBLE_FAST',    l:'Audible Fast  (~15 B/s)'},
+  {k:'GGWAVE_PROTOCOL_AUDIBLE_FASTEST', l:'Audible Fastest  (~28 B/s)'},
 ];
 function cv(s,T){var b=new ArrayBuffer(s.byteLength);new s.constructor(b).set(s);return new T(b);}
 function gp(g,k){try{return g.ProtocolId[k]}catch(e){return null}}
 function mkI(g){var p=g.getDefaultParameters();p.sampleRateInp=SR;p.sampleRateOut=SR;return g.init(p);}
 function ctx(){if(!actx)actx=new(window.AudioContext||window.webkitAudioContext)({sampleRate:SR});return actx;}
 
-function fillSel(sel,gg,side){
+function fillSel(){
+  var sel=document.getElementById('proto');
   sel.innerHTML='';
   P.forEach(function(p){
     var o=document.createElement('option');
-    var lb=p.l;
-    var av=gg&&gp(gg,p.k)!==null&&gp(gg,p.k)!==undefined;
-    if(p.t&&side==='o'){lb+='  [N/A]';o.disabled=true;}
-    else if(p.t){lb+='  \u2605 new';}
-    if(!av&&!p.t)o.disabled=true;
-    o.value=p.k;o.textContent=lb;sel.appendChild(o);
+    o.value=p.k;o.textContent=p.l;sel.appendChild(o);
   });
+  // Default to Fastest
+  sel.selectedIndex=P.length-1;
 }
 
 function loadO(){return new Promise(function(ok){
   var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/ggwave@0.4.0/ggwave.js';
-  s.onload=function(){var f=ggwave_factory;f().then(function(m){ggO=m;iO=mkI(m);document.getElementById('st-orig').textContent='Original: ready';document.getElementById('dot-orig').className='dot ok';fillSel(document.getElementById('proto-orig'),ggO,'o');ok(1);}).catch(function(){document.getElementById('st-orig').textContent='Original: error';document.getElementById('dot-orig').className='dot err';ok(0);});};
+  s.onload=function(){var f=ggwave_factory;f().then(function(m){ggO=m;iO=mkI(m);document.getElementById('st-orig').textContent='Original: ready (16 markers)';document.getElementById('dot-orig').className='dot ok';ok(1);}).catch(function(){document.getElementById('st-orig').textContent='Original: error';document.getElementById('dot-orig').className='dot err';ok(0);});};
   s.onerror=function(){document.getElementById('st-orig').textContent='Original: CDN failed';document.getElementById('dot-orig').className='dot err';ok(0);};
   document.head.appendChild(s);
 });}
 
 function loadN(){return new Promise(function(ok){
   var s=document.createElement('script');s.src='./ggwave.js';
-  s.onload=function(){var f=ggwave_factory;f().then(function(m){ggN=m;iN=mkI(m);document.getElementById('st-opt').textContent='Optimized: ready';document.getElementById('dot-opt').className='dot ok';fillSel(document.getElementById('proto-opt'),ggN,'n');ok(1);}).catch(function(){document.getElementById('st-opt').textContent='Optimized: error';document.getElementById('dot-opt').className='dot err';ok(0);});};
+  s.onload=function(){var f=ggwave_factory;f().then(function(m){ggN=m;iN=mkI(m);document.getElementById('st-opt').textContent='Optimized: ready (8 markers)';document.getElementById('dot-opt').className='dot ok';ok(1);}).catch(function(){document.getElementById('st-opt').textContent='Optimized: error';document.getElementById('dot-opt').className='dot err';ok(0);});};
   s.onerror=function(){document.getElementById('st-opt').textContent='Optimized: not found';document.getElementById('dot-opt').className='dot err';ok(0);};
   document.head.appendChild(s);
 });}
 
 loadO().then(function(){return loadN()}).then(function(){
+  fillSel();
   if(ggO||ggN){document.getElementById('btn-go').disabled=false;document.getElementById('btn-enc').disabled=false;document.getElementById('rx-go').disabled=false;}
-  var s=document.getElementById('proto-opt');
-  for(var i=0;i<s.options.length;i++){if(s.options[i].value==='GGWAVE_PROTOCOL_AUDIBLE_TURBO_WIDE'){s.selectedIndex=i;break;}}
 });
 
 function drawW(cid,wf){
@@ -326,12 +325,13 @@ function show(oR,nR,oL,nL){
 
 function run(play){
   var msg=document.getElementById('msg').value,vol=parseInt(document.getElementById('vol').value);
-  var ok=document.getElementById('proto-orig').value,nk=document.getElementById('proto-opt').value;
-  var oL=document.getElementById('proto-orig').selectedOptions[0].textContent.trim();
-  var nL=document.getElementById('proto-opt').selectedOptions[0].textContent.trim();
-  var oR=ggO?enc(ggO,iO,ok,msg,vol):null;
-  var nR=ggN?enc(ggN,iN,nk,msg,vol):null;
-  document.getElementById('r-sub').textContent=msg.length+' bytes, vol '+vol;
+  var pk=document.getElementById('proto').value;
+  var pLabel=document.getElementById('proto').selectedOptions[0].textContent.trim();
+  var oR=ggO?enc(ggO,iO,pk,msg,vol):null;
+  var nR=ggN?enc(ggN,iN,pk,msg,vol):null;
+  var oL='Original (16 markers) — '+pLabel;
+  var nL='sonic-pipe (8 markers) — '+pLabel;
+  document.getElementById('r-sub').textContent=msg.length+' bytes, '+pLabel+', vol '+vol;
   show(oR,nR,oL,nL);
 
   if(play&&(oR||nR)){
